@@ -4,6 +4,12 @@ import shutil
 import sys
 import argparse
 import subprocess
+import xml.etree.ElementTree as xml
+import uuid as UUID
+import zipfile 
+
+from string import Template
+
 from collections import defaultdict
 
 #==================
@@ -24,6 +30,19 @@ def setg(s,val):
 def getg(s):
 	return globals()[s]
 
+def zip_folder(folder_path, zip_file_path):
+	# Create a zip file
+	with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+		# Walk through the folder
+		for root, _, files in os.walk(folder_path):
+			for file in files:
+				print(folder_path,file)
+				# Create the full path to the file
+				file_path = os.path.join(root, file)
+				# Write the file to the zip file
+				zip_file.write(file_path, os.path.relpath(file_path, start=folder_path))
+
+
 def rmfile(fs):
 	print("Moving old files: "+",".join(map(os.path.basename,fs)))
 	import contextlib
@@ -35,6 +54,14 @@ def rmfile(fs):
 
 def mkdirp(dir):
 	os.makedirs(dir, exist_ok=True)
+
+def readfile(name):
+	with open(name, 'r') as f:
+		return f.read()
+	
+def writefile(fname, s):
+	with open(fname, 'w') as f:
+		f.write(s)
 
 def reset_globals():
 	setg('USE_LETTRINE', 0)
@@ -1323,7 +1350,6 @@ def mk_tex_title(x):
 def mk_tex_chstyle(root):
 	pre = """
 \\newfontfamily\\altfont[ Path = %s/font/ ]{TwitterColorEmoji-SVGinOT}
-\\hyphenation{mis-con-struc-tion Olm-stead hem-ato-man-cer in-vok-er chro-no-man-cer moun-tain-o-logy pseu-do-arch-ae-o-log-ist Noth-fa time-writ-er fun-gi-form wret-ched he-ma-to-man-cy stop-ped can-ned prompt-ed}
 \\newfontfamily\\altfonts[ Path = %s/font/, Ligatures = TeX ]{DejaVuSansMono}
 """ % (root,root)
 
@@ -1425,10 +1451,10 @@ def render_prelude_pdf(root, texfile, texsrcdir, prelude, title_override):
 		author = ''
 
 	rmfile((texfile,titlefile,authorfile,chstylefile))
-	open(titlefile, "w").write(title)
-	open(authorfile, "w").write(author)
-	open(chstylefile, "w").write(mk_tex_chstyle(root))
-	open(headerfile, "w").write('')
+	writefile(titlefile,title)
+	writefile(authorfile,author)
+	writefile(chstylefile,mk_tex_chstyle(root))
+	writefile(headerfile,'')
 	#print("PARSED: %s" % book)
 
 def render_ch_pdf(ch,num_chs):
@@ -1777,6 +1803,25 @@ def build_pdf(root,proj):
 		#print(f"MOVE {f} -> {d}")
 		shutil.move(f, d)
 
+EPUB_HTML_CH_PRE = """<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8"/>
+    <title>$TITLE</title>
+    <meta content="http://www.w3.org/1999/xhtml; charset=utf-8" http-equiv="Content-Type"/>
+    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
+</head>
+<body>
+"""
+
+EPUB_HTML_CH_POST = """
+</body>
+</html>
+"""
+
 def main():
 	root = None
 	infile = None
@@ -1837,7 +1882,7 @@ def main():
 		pdfrenderer = Renderer(book,render_text_pdf,render_ch_pdf)
 		render_prelude_pdf(root, texfile, texsrcdir, book.prelude,chnum)
 		rendered = pdfrenderer.render()
-		open(texfile, "w").write(rendered)
+		writefile(texfile,rendered)
 		build_pdf(root,proj)
 		
 	elif outformat == "txt":
@@ -1845,7 +1890,7 @@ def main():
 		txtrenderer = Renderer(book, render_text_txt,render_ch_txt)
 		prelude = render_prelude_txt(book.prelude)
 		rendered = prelude + txtrenderer.render()
-		open(outfile, "w").write(rendered)
+		writefile(outfile, rendered)
 	elif outformat == "html":
 		outfile = args.outdir+args.proj+".html"
 		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_html)
@@ -1853,15 +1898,122 @@ def main():
 		closing = render_closing_html()
 		rendered = prelude + htmlrenderer.render() + closing
 		rendered = replace_html(rendered)
-		open(outfile,"w").write(rendered)
+		writefile(outfile, rendered)
 	elif outformat == "epub":
+		uuid = UUID.uuid4()
+		class RenderedHTML:
+			def __init__(self, chs):
+				self.chs = chs
+		class RenderedCh:
+			basename = "section"
+			i = 1
+			def __init__(self, name, content):
+				self.name = name
+				self.content = content
+				self.index = RenderedCh.i
+				self.url = f"{RenderedCh.basename}{RenderedCh.i:04}.html"
+				RenderedCh.i += 1
 		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_html)
+		chapters = []
 		for c in htmlrenderer.book.chs:
 			ch = htmlrenderer.render_ch(c, htmlrenderer.num_chs)
 			chname = c.label
-			print()
 			for para in c.chunks:
 				ch += htmlrenderer.render_paras(para)
+			chapter = RenderedCh(chname, ch)
+			chapters.append(chapter)
+		rendered = RenderedHTML(chapters)
+		navmap = xml.Element("navMap")
+		for c in rendered.chs:
+			i = c.index
+			navpoint = xml.SubElement(navmap, "navPoint")
+			navpoint.set("id", f"epub{i}")
+			navpoint.set("playOrder", str(i))
+			navlabel = xml.SubElement(navpoint, "navLabel")
+			text = xml.SubElement(navlabel, "text")
+			text.text = c.name
+			content = xml.SubElement(navpoint, "content")
+			content.set("src", c.url)
+		xml.indent(navmap)
+		outdir = args.outdir + "epub-temp/"
+		mkdirp(outdir)
+		srcdir = "epub-src/"
+		intocfile = srcdir + "toc.ncx"
+		outtocfile = outdir + "toc.ncx"
+		toc = Template(readfile(intocfile))
+		tocstring = toc.safe_substitute(TITLE=book.prelude.title, NAVMAP=xml.tostring(navmap, encoding="unicode"), UUID=uuid)
+		writefile(outtocfile, tocstring)
+
+		manifest = xml.Element("manifest")
+		for c in rendered.chs:
+			i = c.index
+			item = xml.SubElement(manifest, "item")
+			item.set("id", f"id{i}")
+			item.set("href", c.url)
+			item.set("media-type", "application/xhtml+xml")
+		tocItem = xml.SubElement(manifest, "item")
+		tocItem.set("id", "toc")
+		tocItem.set("href", "toc.ncx")
+		tocItem.set("media-type", "application/x-dtbncx+xml")
+		cssItem = xml.SubElement(manifest, "item")
+		cssItem.set("id", "style.css")
+		cssItem.set("href", "style.css")
+		cssItem.set("media-type", "text/css")
+		xml.indent(manifest)
+
+		spine = xml.Element("spine")
+		spine.set("toc", "ncx")
+		
+		for c in rendered.chs:
+			i = c.index
+			item = xml.SubElement(spine, "itemref")
+			item.set("idref", f"id{i}")
+		xml.indent(spine)
+
+		incontent = srcdir + "content.opf"
+		outcontent = outdir + "content.opf"
+		content = Template(readfile(incontent))
+		contentstring = content.safe_substitute(UUID=uuid,TITLE=book.prelude.title,MANIFEST=xml.tostring(manifest, encoding="unicode"),SPINE=xml.tostring(spine,encoding="unicode"))
+		writefile(outcontent, contentstring)
+		cwd = os.getcwd()
+		from_ = cwd + "/" + srcdir + "/META-INF"
+		to = outdir +"/META-INF"
+		#print(f"shutil.copytree('{from_}', '{to}')")
+		#print(f"cp -r {from_} {to}")
+		shutil.copytree(from_, to, dirs_exist_ok=True)
+		cssname = "style.css"
+		incss = cwd + '/' + srcdir + '/' + cssname
+		outcss = outdir + '/' + cssname
+		shutil.copy2(incss, outcss)
+
+		
+		for c in rendered.chs:
+			url = c.url
+			outname = outdir + "/" + url
+			print(f"writing {url} to {outname}")
+			outstring = EPUB_HTML_CH_PRE + "\n" + c.content + "\n" + EPUB_HTML_CH_POST
+			writefile(outname, outstring)
+
+		#outzip = outdir + "/" + proj 
+		outzip = args.outdir + "/" + proj
+		#os.chdir(outdir)
+		#print(f"shutil.make_archive('{outzip}', 'zip', '{outdir}')")
+		#shutil.make_archive(outzip, 'zip', args.outdir, 'epub-temp/')
+		zip_folder(outdir, outzip + ".zip")
+		print(f"zip_folder({outdir}, {outzip + '.zip'}")
+		os.rename(outzip + '.zip', outzip + '.epub')
+		#print(f"os.rename('{outzip + '.zip'}', '{outzip + '.epub'}')")
+		#os.chdir(cwd)
+			
+#from string import Template
+#
+## Define the template with placeholders
+#template = Template("Hello, $name! Welcome to $place.")
+#
+## Substitute values for the placeholders
+#result = template.substitute(name="Alice", place="Wonderland")
+#
+#print(result)
 			#print(ch)
 	#def render(self) -> str:
 	#	return self.render_chs(self.book.chs)
