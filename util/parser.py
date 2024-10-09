@@ -1806,7 +1806,6 @@ def main():
 		else:
 			(lhs,rhs) = line.split("=")
 			confdict[curname][lhs] = rhs
-			print(f"confdict put {curname},{lhs}=>{rhs}")
 	proj = args.proj
 	conf = confdict[proj]
 	outformat = args.format or "txt"
@@ -1855,8 +1854,25 @@ def main():
 		rendered = prelude + htmlrenderer.render() + closing
 		rendered = replace_html(rendered)
 		open(outfile,"w").write(rendered)
-	#elif outformat == "epub":
-	#	pass
+	elif outformat == "epub":
+		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_html)
+		for c in htmlrenderer.book.chs:
+			ch = htmlrenderer.render_ch(c, htmlrenderer.num_chs)
+			chname = c.label
+			print()
+			for para in c.chunks:
+				ch += htmlrenderer.render_paras(para)
+			#print(ch)
+	#def render(self) -> str:
+	#	return self.render_chs(self.book.chs)
+#
+	#def render_chs(self, chs) -> str:
+	#	acc = ''
+	#	for ch in chs:
+	#		acc += self.render_ch(ch,self.num_chs)
+	#	table_of_contents = ""
+		
+		chapters = ""
 	else:
 		raise Exception(f"format '{outformat}' not implemented")
 

@@ -5,6 +5,10 @@ root=$STORY_ROOT
 input=stories/teststory.text
 status=first draft
 
+[mctest]
+input=stories/multich.text
+status=first draft
+
 [text]
 input=stories/text.text
-status=final
+status=first draft
