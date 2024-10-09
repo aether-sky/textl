@@ -1,18 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package version="2.0" unique-identifier="BookId" xmlns="http://www.idpf.org/2007/opf">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:identifier opf:scheme="UUID" id="BookId">urn:uuid:$UUID</dc:identifier>
+    <dc:identifier opf:scheme="UUID" id="BookId">$UUID</dc:identifier>
     <dc:language>en</dc:language>
     <dc:title>$TITLE</dc:title>
   </metadata>
   $MANIFEST
-  <!--<manifest>
-    <item id="Section0001.xhtml" href="Text/Section0001.xhtml" media-type="application/xhtml+xml"/>
-    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-    <item id="style.css" href="style.css" media-type="text/css"/>
-  </manifest>-->
   $SPINE
-  <!--<spine toc="ncx">
-    <itemref idref="Section0001.xhtml"/>
-  </spine>-->
 </package>

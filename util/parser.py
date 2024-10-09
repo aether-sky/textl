@@ -1927,7 +1927,8 @@ def main():
 		for c in rendered.chs:
 			i = c.index
 			navpoint = xml.SubElement(navmap, "navPoint")
-			navpoint.set("id", f"epub{i}")
+			navpoint.set("class","chapter")
+			navpoint.set("id", f"id{i}")
 			navpoint.set("playOrder", str(i))
 			navlabel = xml.SubElement(navpoint, "navLabel")
 			text = xml.SubElement(navlabel, "text")
@@ -1941,7 +1942,7 @@ def main():
 		intocfile = srcdir + "toc.ncx"
 		outtocfile = outdir + "toc.ncx"
 		toc = Template(readfile(intocfile))
-		tocstring = toc.safe_substitute(TITLE=book.prelude.title, NAVMAP=xml.tostring(navmap, encoding="unicode"), UUID=uuid)
+		tocstring = toc.safe_substitute(TITLE=book.prelude.title, AUTHOR=book.prelude.author,NAVMAP=xml.tostring(navmap, encoding="unicode"), UUID=uuid)
 		writefile(outtocfile, tocstring)
 
 		manifest = xml.Element("manifest")
@@ -1952,7 +1953,7 @@ def main():
 			item.set("href", c.url)
 			item.set("media-type", "application/xhtml+xml")
 		tocItem = xml.SubElement(manifest, "item")
-		tocItem.set("id", "toc")
+		tocItem.set("id", "ncx")
 		tocItem.set("href", "toc.ncx")
 		tocItem.set("media-type", "application/x-dtbncx+xml")
 		cssItem = xml.SubElement(manifest, "item")
