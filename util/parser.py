@@ -1803,24 +1803,11 @@ def build_pdf(root,proj):
 		#print(f"MOVE {f} -> {d}")
 		shutil.move(f, d)
 
-EPUB_HTML_CH_PRE = """<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta http-equiv="CONTENT-TYPE" content="text/html; charset=utf-8"/>
-    <title>$TITLE</title>
-    <meta content="http://www.w3.org/1999/xhtml; charset=utf-8" http-equiv="Content-Type"/>
-    <link href="stylesheet.css" type="text/css" rel="stylesheet"/>
-</head>
-<body>
-"""
-
-EPUB_HTML_CH_POST = """
-</body>
-</html>
-"""
+def write_template(fname,outname, **kwargs):
+	content = readfile(fname)
+	template = Template(content)
+	output = template.safe_substitute(**kwargs)
+	writefile(outname, output)
 
 def main():
 	root = None
@@ -1900,18 +1887,25 @@ def main():
 		rendered = replace_html(rendered)
 		writefile(outfile, rendered)
 	elif outformat == "epub":
+		outdir = args.outdir + "epub-temp/"
+		shutil.rmtree(outdir)
+		mkdirp(outdir)
+		include_toc_page = True
 		uuid = UUID.uuid4()
 		class RenderedHTML:
 			def __init__(self, chs):
 				self.chs = chs
 		class RenderedCh:
 			basename = "section"
-			i = 1
+			i = 3
+			@staticmethod
+			def get_url(k):
+				return f"{RenderedCh.basename}{k:04}.html"
 			def __init__(self, name, content):
 				self.name = name
 				self.content = content
 				self.index = RenderedCh.i
-				self.url = f"{RenderedCh.basename}{RenderedCh.i:04}.html"
+				self.url = RenderedCh.get_url(RenderedCh.i)
 				RenderedCh.i += 1
 		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_html)
 		chapters = []
@@ -1923,108 +1917,100 @@ def main():
 			chapter = RenderedCh(chname, ch)
 			chapters.append(chapter)
 		rendered = RenderedHTML(chapters)
+		
 		navmap = xml.Element("navMap")
-		for c in rendered.chs:
-			i = c.index
-			navpoint = xml.SubElement(navmap, "navPoint")
+		def mkPoint(root, k, url, name):
+			navpoint = xml.SubElement(root, "navPoint")
 			navpoint.set("class","chapter")
-			navpoint.set("id", f"id{i}")
-			navpoint.set("playOrder", str(i))
+			navpoint.set("id", f"id{k}")
+			navpoint.set("playOrder", str(k))
 			navlabel = xml.SubElement(navpoint, "navLabel")
 			text = xml.SubElement(navlabel, "text")
-			text.text = c.name
+			text.text = name
 			content = xml.SubElement(navpoint, "content")
-			content.set("src", c.url)
+			content.set("src", url)
+		mkPoint(navmap, 1, RenderedCh.get_url(1), "Title Page")
+		if include_toc_page:
+			mkPoint(navmap, 2, RenderedCh.get_url(2), "Table of Contents") 
+		for c in rendered.chs:
+			i = c.index
+			mkPoint(navmap, i, c.url, c.name)
 		xml.indent(navmap)
-		outdir = args.outdir + "epub-temp/"
-		mkdirp(outdir)
 		srcdir = "epub-src/"
 		intocfile = srcdir + "toc.ncx"
 		outtocfile = outdir + "toc.ncx"
-		toc = Template(readfile(intocfile))
-		tocstring = toc.safe_substitute(TITLE=book.prelude.title, AUTHOR=book.prelude.author,NAVMAP=xml.tostring(navmap, encoding="unicode"), UUID=uuid)
-		writefile(outtocfile, tocstring)
+		write_template(intocfile, outtocfile, TITLE=book.prelude.title, AUTHOR=book.prelude.author,NAVMAP=xml.tostring(navmap, encoding="unicode"), UUID=uuid)
 
 		manifest = xml.Element("manifest")
+		def mkItem(root, k, url, typ):
+			item = xml.SubElement(root, "item")
+			if isinstance(k, int):
+				item.set("id", f"id{k}")
+			else:
+				item.set("id",k)
+			item.set("href", url)
+			item.set("media-type", typ)
+		mkItem(manifest, 1, RenderedCh.get_url(1), "application/xhtml+xml")
+		if include_toc_page:
+			mkItem(manifest, 2, RenderedCh.get_url(2), "application/xhtml+xml")
 		for c in rendered.chs:
 			i = c.index
-			item = xml.SubElement(manifest, "item")
-			item.set("id", f"id{i}")
-			item.set("href", c.url)
-			item.set("media-type", "application/xhtml+xml")
-		tocItem = xml.SubElement(manifest, "item")
-		tocItem.set("id", "ncx")
-		tocItem.set("href", "toc.ncx")
-		tocItem.set("media-type", "application/x-dtbncx+xml")
-		cssItem = xml.SubElement(manifest, "item")
-		cssItem.set("id", "style.css")
-		cssItem.set("href", "style.css")
-		cssItem.set("media-type", "text/css")
+			mkItem(manifest,i, c.url, "application/xhtml+xml")
+		mkItem(manifest, "ncx", "toc.ncx", "application/x-dtbncx+xml")
+		mkItem(manifest, "style.css", "style.css", "text/css")
 		xml.indent(manifest)
 
 		spine = xml.Element("spine")
 		spine.set("toc", "ncx")
-		
+		def mkSpine(root, k):
+			item = xml.SubElement(root, "itemref")
+			item.set("idref", f"id{k}")
+		mkSpine(spine, 1);
+		if include_toc_page:
+			mkSpine(spine, 2)
 		for c in rendered.chs:
 			i = c.index
-			item = xml.SubElement(spine, "itemref")
-			item.set("idref", f"id{i}")
+			mkSpine(spine, i)
 		xml.indent(spine)
 
 		incontent = srcdir + "content.opf"
 		outcontent = outdir + "content.opf"
-		content = Template(readfile(incontent))
-		contentstring = content.safe_substitute(UUID=uuid,TITLE=book.prelude.title,MANIFEST=xml.tostring(manifest, encoding="unicode"),SPINE=xml.tostring(spine,encoding="unicode"))
-		writefile(outcontent, contentstring)
+		write_template(incontent, outcontent, UUID=uuid,TITLE=book.prelude.title,MANIFEST=xml.tostring(manifest, encoding="unicode"),SPINE=xml.tostring(spine,encoding="unicode"))
 		cwd = os.getcwd()
 		from_ = cwd + "/" + srcdir + "/META-INF"
 		to = outdir +"/META-INF"
-		#print(f"shutil.copytree('{from_}', '{to}')")
-		#print(f"cp -r {from_} {to}")
+
 		shutil.copytree(from_, to, dirs_exist_ok=True)
 		cssname = "style.css"
 		incss = cwd + '/' + srcdir + '/' + cssname
 		outcss = outdir + '/' + cssname
 		shutil.copy2(incss, outcss)
 
+		intitle = srcdir + "/" + "title_template.html"
+		outtitle = outdir + '/' + RenderedCh.get_url(1)
+		write_template(intitle, outtitle, TITLE=book.prelude.title, AUTHOR=book.prelude.author)
+
+		intoc = srcdir + "/" + "toc_template.html"
+		outtoc = outdir + '/' + RenderedCh.get_url(2)
+		toccontent = ""
+		toccontent += f"<p><a href='{RenderedCh.get_url(1)}'>Title Page</a></p>\n"
+		toccontent += f"<p><a href='{RenderedCh.get_url(2)}'>Table of Contents</a></p>\n"
+		for c in rendered.chs:
+			toccontent += f"<p><a href='{c.url}'>{c.name}</a></p>\n"
+		write_template(intoc, outtoc, CONTENT=toccontent)
+
 		
 		for c in rendered.chs:
 			url = c.url
 			outname = outdir + "/" + url
 			print(f"writing {url} to {outname}")
-			outstring = EPUB_HTML_CH_PRE + "\n" + c.content + "\n" + EPUB_HTML_CH_POST
-			writefile(outname, outstring)
+			write_template(srcdir + '/' + "ch_template.html", outname, CONTENT= c.content)
 
-		#outzip = outdir + "/" + proj 
 		outzip = args.outdir + "/" + proj
-		#os.chdir(outdir)
-		#print(f"shutil.make_archive('{outzip}', 'zip', '{outdir}')")
-		#shutil.make_archive(outzip, 'zip', args.outdir, 'epub-temp/')
+
 		zip_folder(outdir, outzip + ".zip")
-		print(f"zip_folder({outdir}, {outzip + '.zip'}")
 		os.rename(outzip + '.zip', outzip + '.epub')
-		#print(f"os.rename('{outzip + '.zip'}', '{outzip + '.epub'}')")
-		#os.chdir(cwd)
 			
-#from string import Template
-#
-## Define the template with placeholders
-#template = Template("Hello, $name! Welcome to $place.")
-#
-## Substitute values for the placeholders
-#result = template.substitute(name="Alice", place="Wonderland")
-#
-#print(result)
-			#print(ch)
-	#def render(self) -> str:
-	#	return self.render_chs(self.book.chs)
-#
-	#def render_chs(self, chs) -> str:
-	#	acc = ''
-	#	for ch in chs:
-	#		acc += self.render_ch(ch,self.num_chs)
-	#	table_of_contents = ""
-		
 		chapters = ""
 	else:
 		raise Exception(f"format '{outformat}' not implemented")
