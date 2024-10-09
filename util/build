@@ -1,0 +1,23 @@
+#!/bin/bash
+case $1 in
+test)
+	proj=test
+;;
+*)
+	if [[ -z "$1" ]] ; then
+		echo "no project specified"
+		exit 1
+	fi
+	proj=$1
+esac
+
+root=$STORY_ROOT
+outdir=$root/out/
+format=$2
+
+if [[ -z "$format" ]] ; then
+	format=txt
+fi
+
+python3 ./util/parser.py --proj=$proj --format=$format --outdir=$outdir
+

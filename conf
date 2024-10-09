@@ -1,0 +1,10 @@
+[global]
+root=$STORY_ROOT
+
+[test]
+input=stories/teststory.text
+status=first draft
+
+[text]
+input=stories/text.text
+status=final

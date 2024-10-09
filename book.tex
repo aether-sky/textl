@@ -1,0 +1,178 @@
+\batchmode
+
+\input{includedir}
+
+\documentclass[14pt,openany]{memoir} %OLDVALUE:11pt
+\usepackage[osf]{mathpazo}
+\usepackage[mathcal,mathbf]{euler}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{xcolor}
+\usepackage{calc}
+
+\definecolor{mybgcolor}{HTML}{FFFFFF} %white
+%\definecolor{mybgcolor}{HTML}{fff0d8} %nice cream color
+%\definecolor{myfgcolor}{HTML}{CCAA77}
+%
+%\makeatletter
+%\newcommand{\globalcolor}[1]{%
+%  \color{#1}\global\let\default@color\current@color
+%}
+%\makeatother
+
+\usepackage[pagecolor = mybgcolor]{pagecolor}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx,sidecap,tikz}
+\usepackage{microtype}
+\usepackage{lettrine}
+\usepackage{siunitx} % automatic number formattingalignment
+\usepackage{censor}
+\usepackage{pgfplots}
+%\usepackage{newclude} %! LaTeX Error: Command \providelength already defined.
+\usepackage{fontspec}
+
+\setmainfont [
+	Path = font/,
+	ItalicFont = {Cardo-Italic}%,
+	%SmallCapsFont = {DanteMTRegularSC} ] {DanteMT}%SourceHanSansHW-Regular}
+] {Cardo-Regular}
+%\setmainfont [ Path = /mnt/e/time/font/,AutoFakeSlant=0.4 ] {SourceHanSerif-Regular}%SourceHanSansHW-Regular}
+
+%\setmainfont [ AutoFakeSlant=0.4 ] {Consolas}%SourceHanSansHW-Regular}
+
+\usepackage{perpage} %the perpage package
+\MakePerPage{footnote} %the perpage package command
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+%\aliaspagestyle{cleared}{plain}
+\pgfplotsset{width=7cm, compat=1.12}
+%\hyphenpenalty=0
+
+% To get lining figures in tables set by siunitx, which apparently uses the
+% \mathrm font instead of \mathnormal
+\SetMathAlphabet{\mathrm}{normal}{U}{eur}{m}{n}
+% =========================
+% = Setting up the layout =
+% =========================
+% With a 9pt body font we want a little extra line spacing (I mean *leading*)
+%\setSingleSpace{1.2}
+%\SingleSpacing
+
+\setstocksize{9in}{6in}
+\settrimmedsize{\stockheight}{\stockwidth}{*}
+\settrims{0pt}{0pt}
+% edit this number to change the number of lines on the page
+\settypeblocksize{32\baselineskip}{5in}{*} %OLDVALUE:41/5in
+\setlrmargins{*}{0.5in}{*}
+\setulmargins{*}{0.5in}{*}
+\setheadfoot{\baselineskip}{\baselineskip} % headheight and footskip
+\setheaderspaces{0.5in}{*}{*} % headdrop, headsep, and ratio
+\checkandfixthelayout[lines]
+% Set up custom headers and footers
+\makepagestyle{stylish}
+%\copypagestyle{stylish}{headings}
+\makerunningwidth{stylish}{5in}
+\makeheadposition{stylish}{flushleft}{flushright}{}{}
+\makeoddfoot{stylish}{}{\thepage}{}
+\makeevenfoot{stylish}{}{\thepage}{}
+\addtopsmarks{stylish}{}{
+  \createmark{chapter}{left}{nonumber}{}{}
+}
+\pagestyle{stylish}
+
+% = Table of contents tweaks =
+
+%\renewcommand*{\contentsname}{Table of Contents}
+%\setsecnumdepth{subsubsection}
+%\settocdepth{subsection}
+
+% = Chapters =
+
+\input{pdf-src/chstylef}
+
+% See below, after introduction, for \clearforchapter
+% Prevent page numbers from appearing on chapter pages
+%\aliaspagestyle{chapter}{stylish}%\aliaspagestyle{chapter}{empty}
+
+\def \headingss {``blank''}
+\newcommand{\chunk}[1]{
+    \def \headingss {#1}
+}
+
+% ===================
+% = Marginal labels =
+% ===================
+\strictpagecheck % Turn on robust page checking
+\captiondelim{} % Don't print a colon after "Figure #.#"
+\makeatletter
+\renewcommand{\fnum@figure}{%
+\checkoddpage%
+\ifoddpage%
+\makebox[0pt][l]{\hspace{-1in}{\scshape\figurename~\thefigure}}%
+\else
+\makebox[0pt][r]{{\scshape\figurename~\thefigure}\hspace*{-5in}}%
+\fi%
+}
+\renewcommand{\fnum@table}{%
+\checkoddpage%
+\ifoddpage%
+\makebox[0pt][l]{\hspace{-1in}{\scshape\tablename~\thetable}}%
+\else
+\makebox[0pt][r]{{\scshape\tablename~\thetable}\hspace*{-5in}}%
+\fi%
+}
+\let\mytagform@=\tagform@
+\def\tagform@#1{%
+\checkoddpage%
+\ifoddpage%
+\makebox[1sp][l]{\hspace{-5in}\maketag@@@{%(\ignorespaces#1 \unskip \@@italiccorr)
+}}%
+\else
+\makebox[1sp][r]{\maketag@@@{%(\ignorespaces#1 \unskip \@@italiccorr)
+}\hspace*{-1in}}%
+\fi%
+}
+\renewcommand{\eqref}[1]{aaa\textup{\mytagform@{\ref{#1}}}}
+\makeatother
+\usetikzlibrary{arrows,positioning,decorations.pathmorphing,trees}
+
+%\usepackage{etoolbox}
+%\AtBeginEnvironment{quote}{\singlespacing\small}
+
+
+\include{pdf-src/header}
+
+%\AtBeginDocument{\globalcolor{myfgcolor}}
+
+\begin{document}
+\scrollmode
+
+
+\input{defs}
+
+\input{pdf-src/title}
+\input{pdf-src/author}
+%\makebox[0pt][s]{Hi there!}\makebox[0pt][s]{Another sentence}What about this?
+%\thispagestyle{empty}\mbox{}\vspace{2in}\noindent\begin{flushright}{\HUGE\scshape{}\let\clearpage\relax THE TITLE}\\\end{flushright}\vspace{6\baselineskip}
+%\hfill{\Large\scshape{}\let\clearpage\relax THE AUTHOR}\cleartoverso
+
+%\tableofcontents*
+
+%\thispagestyle{empty}
+%\cleartoverso
+
+%dedication
+%\mbox{}\vspace{2in}
+%{
+%this is where like
+%
+%\parbox{8cm}{\footnotesize the dedication would go}
+%}
+
+\setlength{\parskip}{0pt}
+%\setlength{\parindent}{0pt}
+
+
+\thispagestyle{empty}
+\input{pdf-src/text}
+%\include{text}
+\end{document}

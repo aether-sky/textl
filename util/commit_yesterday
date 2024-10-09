@@ -1,0 +1,2 @@
+x=`date -d "yesterday 20:00" +"%Y-%m-%dT%H:%M:%S"`
+echo GIT_AUTHOR_DATE=\"$x\" GIT_COMMITTER_DATE=\"$x\" git commit -a -m \"commit\"

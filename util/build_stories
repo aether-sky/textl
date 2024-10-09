@@ -1,0 +1,16 @@
+pushd "$STORY_ROOT"
+if [[ $? -ne 0 ]] ; then
+    echo "ERROR: environment STORY_ROOT not set"
+    exit 1
+fi
+
+for i in excited aesop date hit cleaners sandboxes sfo microwave aeschylus journys_enn  homer soda nowar; do 
+    ./util/build $i html 
+done
+python3 ./util/publish.py excited aesop date hit cleaners sandboxes sfo microwave aeschylus journys_enn  homer soda nowar
+popd
+
+mkdir -p "$STORY_ROOT/stories-published"
+pushd "$STORY_ROOT/stories-published"
+python3 generate_index.py
+popd

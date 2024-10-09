@@ -1,0 +1,5 @@
+if [[ -z "$1" ]] ; then
+	python3 util/watch.py b c
+else
+	python3 util/watch.py b c "$@"
+fi

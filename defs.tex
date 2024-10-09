@@ -1,0 +1,73 @@
+\newcommand{\quotedash}{\noindent\rule[.5ex]{2em}{0.5pt}}
+\newcommand{\edit}{}
+\newcommand{\hydrogen}{H\textsubscript{2}}
+\newcommand{\oxygen}{O\textsubscript{2}}
+\newcommand{\comments}[1]{}
+\newcommand{\cliche}[1]{#1}
+\newcommand{\badword}[1]{#1}
+
+\newcommand{\secbreak}
+{
+    \begin{equation}
+    \diamond \diamond \diamond
+    \end{equation}
+}
+
+\newcommand{\minibreak}
+{
+    \begin{equation}
+    \_
+    \end{equation}
+}
+
+\newcommand{\snip}
+{
+    \begin{equation}
+    \cdot\cdot\cdot {\textsc{TODO}} \cdot\cdot\cdot
+    \end{equation}
+}
+
+\newcommand{\secsnip}[1]
+{
+    \begin{equation}
+    \cdot\cdot\cdot {\texttt{BEGIN OPTIONAL TODO}} \cdot\cdot\cdot
+    \end{equation}
+        #1
+    \begin{equation}
+    \cdot\cdot\cdot {\texttt{END OPTIONAL TODO}} \cdot\cdot\cdot
+    \end{equation}
+}
+
+\catcode`\|=\active
+
+%\def|#1|{\begin{adjustwidth}{2em}{0em}「#1」\end{adjustwidth}}
+\def|#1|{``#1''}
+\newlength{\myl}
+
+\newcommand{\skips}[1]
+{
+    {
+    \settowidth{\myl}{#1}
+    \hspace{\myl}
+    }
+}
+\newcommand{\bigskips}[3]
+{
+    |#1|
+
+    #2
+
+    |\skips{#1}#3|
+}
+
+\newcommand{\repeats}[1]{
+
+\setbox0=\vbox{\leavevmode\xleaders\hbox{#1 }\hfill\kern0pt}
+
+\hfill
+
+\cleaders\box0\vfill
+
+\eject
+
+}
