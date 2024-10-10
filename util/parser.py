@@ -1923,7 +1923,6 @@ def main():
 	root = root + '/'
 	infile = conf['input']
 	chapter = conf['chapter'] if 'chapter' in conf else None
-	texsrcdir = root + "pdf-src/"
 
 	if not SKIP_TESTS:
 		run_tests()
@@ -1937,6 +1936,7 @@ def main():
 
 	book = parse(lines, chnum)
 	if outformat == "pdf":
+		texsrcdir = root + "pdf-src/"
 		mkdirp(texsrcdir)
 		texfile = texsrcdir+"text.tex"
 		pdfrenderer = Renderer(book,render_text_pdf,render_ch_pdf)
