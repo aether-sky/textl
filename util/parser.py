@@ -1515,6 +1515,14 @@ def render_text_pdf(t, para_callback, same_speaker):
 		error("Unexpected node tag '%s'" % tag)
 	return str(t)
 
+def render_ch_epub(ch, num_chs):
+	if num_chs == 1:
+		return ""
+		#label = "*****"
+	else:
+		label = ch.label
+	return "<div class='title'>" + label + "</div>"
+
 def render_prelude_html(prelude):
 	#@font-face {
 	#	font-family: 'Cardo';
@@ -1964,9 +1972,10 @@ def main():
 		shutil.rmtree(outdir)
 		mkdirp(outdir)
 
-		include_toc_page = True
 		uuid = UUID.uuid4()
-		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_html)
+		htmlrenderer = HTMLRenderer(book, render_text_html, render_ch_epub)
+		numchs = len(htmlrenderer.book.chs)
+		include_toc_page = numchs > 1
 		chapters = []
 		for c in htmlrenderer.book.chs:
 			ch = htmlrenderer.render_ch(c, htmlrenderer.num_chs)
@@ -1997,10 +2006,10 @@ def main():
 		intoc = EPUB_SRCDIR + "/" + "toc_template.html"
 		outtoc = outdir + "/" + EpubRenderedCh.get_url(2)
 		toccontent = ""
-		toccontent += f"<p><a href='{EpubRenderedCh.get_url(1)}'>Title Page</a></p>\n"
-		toccontent += f"<p><a href='{EpubRenderedCh.get_url(2)}'>Table of Contents</a></p>\n"
+		toccontent += f"<p style='margin:0'><a href='{EpubRenderedCh.get_url(1)}'>Title Page</a></p>\n"
+		toccontent += f"<p style='margin:0'><a href='{EpubRenderedCh.get_url(2)}'>Table of Contents</a></p>\n"
 		for c in rendered.chs:
-			toccontent += f"<p><a href='{c.url}'>{c.name}</a></p>\n"
+			toccontent += f"<p style='margin:0'><a href='{c.url}'>{c.name}</a></p>\n"
 		write_template(intoc, outtoc, CONTENT=toccontent)
 
 		

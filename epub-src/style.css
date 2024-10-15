@@ -1,0 +1,12 @@
+p {
+    margin:0px;
+    text-indent: 1em;
+    text-align:justify;
+}
+
+.title {
+    font-size:3em;
+    text-align:center;
+    margin-top:2em;
+    margin-bottom:2em;
+}
